@@ -20,3 +20,10 @@ func BoolByte[T hasZero](v T) byte {
 	}
 	return 1
 }
+
+func IF[T any](cond bool, a, b T) T {
+	if cond {
+		return a
+	}
+	return b
+}

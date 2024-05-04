@@ -4,6 +4,8 @@ func main() {
 
 	cpu := NewCPU()
 
-	cpu.regs8 = cpu.mem[REGS_BASE:]
-	// cpu.regs16 = cpu.mem[REGS_BASE:]
+	cpu.regs16.Set(REG_CS, 0xF000)
+
+	// Trap flag off
+	cpu.regs8.Set(FLAG_TF, 0)
 }

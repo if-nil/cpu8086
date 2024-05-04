@@ -72,7 +72,7 @@ type Cpu struct {
 	mem             [RAM_SIZE]byte
 	ioPorts         [IO_PORT_COUNT]byte
 	opcodeStream    []byte
-	regs8           []byte
+	regs8           *Reg8
 	iRm             byte
 	iW              byte
 	iReg            byte
@@ -94,7 +94,7 @@ type Cpu struct {
 	spkrEn          byte
 	biosTableLookup [20][256]byte
 
-	regs16      []uint16
+	regs16      *Reg16
 	regIp       uint16
 	segOverride uint16
 	fileIndex   uint16
@@ -127,8 +127,8 @@ type Cpu struct {
 
 func NewCPU() *Cpu {
 	cpu := &Cpu{}
-	cpu.regs8 = make([]byte, 0)
-	cpu.regs16 = make([]uint16, 0)
+	cpu.regs8 = NewReg8(REGS_BASE, cpu.mem)
+	cpu.regs16 = NewReg16(REGS_BASE, cpu.mem)
 	cpu.vidMemBase = make([]byte, 0)
 	return cpu
 }
@@ -140,32 +140,20 @@ func (c *Cpu) topBit() byte {
 
 // Set carry flag
 func (c *Cpu) setCf(newCf int) byte {
-	if newCf != 0 {
-		c.regs8[FLAG_CF] = 1
-	} else {
-		c.regs8[FLAG_CF] = 0
-	}
-	return c.regs8[FLAG_CF]
+	c.regs8.Set(FLAG_CF, IF(newCf != 0, byte(1), 0))
+	return c.regs8.Get(FLAG_CF)
 }
 
 // Set auxiliary flag
 func (c *Cpu) setAf(newAf int) byte {
-	if newAf != 0 {
-		c.regs8[FLAG_AF] = 1
-	} else {
-		c.regs8[FLAG_AF] = 0
-	}
-	return c.regs8[FLAG_AF]
+	c.regs8.Set(FLAG_AF, IF(newAf != 0, byte(1), 0))
+	return c.regs8.Get(FLAG_AF)
 }
 
 // Set overflow flag
 func (c *Cpu) setOf(newOf int) byte {
-	if newOf != 0 {
-		c.regs8[FLAG_OF] = 1
-	} else {
-		c.regs8[FLAG_OF] = 0
-	}
-	return c.regs8[FLAG_OF]
+	c.regs8.Set(FLAG_OF, IF(newOf != 0, byte(1), 0))
+	return c.regs8.Get(FLAG_OF)
 }
 
 // Set auxiliary and overflow flag after arithmetic operations
@@ -174,20 +162,20 @@ func (c *Cpu) setAfOfArith() byte {
 	if c.opResult == int(c.opDest) {
 		return c.setOf(0)
 	}
-	return c.setOf(1 & (int(c.regs8[FLAG_CF]) ^ int(c.opSource)>>(c.topBit()-1)))
+	return c.setOf(1 & (int(c.regs8.Get(FLAG_CF)) ^ int(c.opSource)>>(c.topBit()-1)))
 }
 
 // Assemble and return emulated CPU FLAGS register in scratch_uint
 func (c *Cpu) makeFlags() {
 	c.scratchUint = 0xF002
 	for i := 9; i >= 0; i-- {
-		c.scratchUint += uint32(c.regs8[FLAG_CF+i]) << c.biosTableLookup[TABLE_FLAGS_BITFIELDS][i]
+		c.scratchUint += uint32(c.regs8.Get(FLAG_CF+i)) << c.biosTableLookup[TABLE_FLAGS_BITFIELDS][i]
 	}
 }
 
 // Set emulated CPU FLAGS register from regs8[FLAG_xx] values
 func (c *Cpu) setFlags(newFlags int) {
 	for i := 9; i >= 0; i-- {
-		c.regs8[FLAG_CF+i] = BoolByte((c.scratchUint >> c.biosTableLookup[TABLE_FLAGS_BITFIELDS][i]) & uint32(newFlags))
+		c.regs8.Set(FLAG_CF+i, BoolByte((c.scratchUint>>c.biosTableLookup[TABLE_FLAGS_BITFIELDS][i])&uint32(newFlags)))
 	}
 }
