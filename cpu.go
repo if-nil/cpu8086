@@ -1,6 +1,9 @@
 package cpu8086
 
-import "time"
+import (
+	"os"
+	"time"
+)
 
 const (
 	// Emulator system constants
@@ -118,7 +121,7 @@ type Cpu struct {
 	vmemCtr      uint32
 
 	opResult   int
-	disk       [3]int
+	disk       [3]*os.File
 	scratchInt int
 
 	clockBuf time.Time
